@@ -4,9 +4,7 @@ import redis from "redis";
 const url = process.env.REDIS_URL;
 const RedisClient = redis.createClient({
   url,
-  socket: {
-    connectTimeout: 10000, // Increase timeout to 10 seconds
-  },
+  legacyMode: true,
 });
 
 RedisClient.on("connect", () => console.log("Redis client connected"));
