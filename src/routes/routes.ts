@@ -26,14 +26,9 @@ routes.post("/api/register", async (req, res) => {
   const { email, password } = req.body;
   console.log(email, password);
 
-  const user: User = {
-    email: email,
-    password: password,
-  };
-
   try {
-    // Check if the email exists in the Redis set 'users'
-    const userExists = await RedisClient.SISMEMBER("users", user.email);
+    // Check if the email exists in the Redis set 'userEmails'
+    const userExists = await RedisClient.SISMEMBER("userEmails", email);
 
     if (userExists) {
       res.status(409).send("User already exists");
@@ -41,10 +36,13 @@ routes.post("/api/register", async (req, res) => {
     }
 
     // Hash the password
-    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Add the email to the Redis set 'userEmails'
+    await RedisClient.SADD("userEmails", email);
 
     // Add the user with the hashed password to the Redis hash 'users'
-    await RedisClient.HSET("users", user.email, JSON.stringify(user));
+    await RedisClient.HSET("users", email, hashedPassword);
 
     res.status(201).send("User registered successfully");
   } catch (error) {
@@ -56,25 +54,16 @@ routes.post("/api/register", async (req, res) => {
 routes.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const user: User = {
-    email: email,
-    password: password,
-  };
-
   try {
-    // Check if the email exists in the Redis set 'users'
-    const userExists = await RedisClient.HGET("users", user.email);
-    console.log(userExists);
+    // Check if the email exists in the Redis set 'userEmails'
+    const userExists = await RedisClient.SISMEMBER("userEmails", email);
 
     if (userExists) {
       // Get the hashed password from the Redis hash 'users'
-      const hashedPassword = await RedisClient.HGET("users", user.email);
+      const hashedPassword = await RedisClient.HGET("users", email);
 
       // Compare the hashed password with the password provided
-      const passwordMatches = await bcrypt.compare(
-        user.password,
-        hashedPassword
-      );
+      const passwordMatches = await bcrypt.compare(password, hashedPassword);
 
       if (passwordMatches) {
         res.status(200).send("User logged in successfully");
