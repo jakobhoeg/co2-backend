@@ -1,6 +1,6 @@
 import cors from "cors";
 import express from "express";
-import bodyParser from "body-parser";
+import bodyParser, { json } from "body-parser";
 import { RedisClient } from "../sessions/db.js";
 import multer from "multer";
 import fs from "fs/promises";
@@ -44,7 +44,7 @@ routes.post("/api/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
     // Add the user with the hashed password to the Redis hash 'users'
-    await RedisClient.HSET("users", user.email, hashedPassword);
+    await RedisClient.HSET("users", user.email, JSON.stringify(user));
 
     res.status(201).send("User registered successfully");
   } catch (error) {
@@ -63,7 +63,8 @@ routes.post("/api/login", async (req, res) => {
 
   try {
     // Check if the email exists in the Redis set 'users'
-    const userExists = await RedisClient.SISMEMBER("users", user.email);
+    const userExists = await RedisClient.HGET("users", user.email);
+    console.log(userExists);
 
     if (userExists) {
       // Get the hashed password from the Redis hash 'users'
