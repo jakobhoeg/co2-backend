@@ -27,8 +27,7 @@ routes.post("/api/register", async (req, res) => {
   console.log(email, password);
 
   try {
-    // Check if the email exists in the Redis set 'userEmails'
-    const userExists = await RedisClient.SISMEMBER("userEmails", email);
+    const userExists = await RedisClient.HEXISTS("users", email);
 
     if (userExists) {
       res.status(409).send("User already exists");
@@ -37,9 +36,6 @@ routes.post("/api/register", async (req, res) => {
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Add the email to the Redis set 'userEmails'
-    await RedisClient.SADD("userEmails", email);
 
     // Add the user with the hashed password to the Redis hash 'users'
     await RedisClient.HSET("users", email, hashedPassword);
@@ -55,8 +51,7 @@ routes.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Check if the email exists in the Redis set 'userEmails'
-    const userExists = await RedisClient.SISMEMBER("userEmails", email);
+    const userExists = await RedisClient.HEXISTS("users", email);
 
     if (userExists) {
       // Get the hashed password from the Redis hash 'users'
@@ -68,10 +63,10 @@ routes.post("/api/login", async (req, res) => {
       if (passwordMatches) {
         res.status(200).send("User logged in successfully");
       } else {
-        res.status(401).send("Invalid password");
+        res.status(401).send("Error logging in user");
       }
     } else {
-      res.status(401).send("User not found");
+      res.status(401).send("Error logging in user");
     }
   } catch (error) {
     console.error("Error logging in user:", error);
