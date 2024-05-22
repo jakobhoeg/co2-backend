@@ -24,6 +24,7 @@ routes.use(bodyParser.json());
 
 routes.post("/api/register", async (req, res) => {
   const { email, password } = req.body;
+  console.log(email, password);
 
   const user: User = {
     email: email,
@@ -39,14 +40,11 @@ routes.post("/api/register", async (req, res) => {
       return;
     }
 
-    // Add the email to the Redis set 'users'
-    await RedisClient.SADD("users", user.email);
-    // Bcrypt the password and store it in the Redis hash 'users'
-    await RedisClient.HSET(
-      "users",
-      user.email,
-      await bcrypt.hash(user.password, 10)
-    );
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+
+    // Add the user with the hashed password to the Redis hash 'users'
+    await RedisClient.HSET("users", user.email, hashedPassword);
 
     res.status(201).send("User registered successfully");
   } catch (error) {
