@@ -5,10 +5,10 @@ import { configDotenv } from "dotenv";
 configDotenv();
 let url = "";
 
-if (process.env.NODE_ENV !== "production") {
-  url = process.env.REDIS_URL;
-} else {
+if (process.env.NODE_ENV === "development") {
   url = process.env.REDIS_DEV_URL;
+} else {
+  url = process.env.REDIS_URL;
 }
 
 const RedisClient = redis.createClient({
