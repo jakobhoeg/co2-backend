@@ -51,7 +51,7 @@ routes.post("/api/register", async (req, res) => {
     };
 
     // Add the user with the hashed password to the Redis hash 'users'
-    await RedisClient.HSET("users:", {
+    await RedisClient.HSET("users:" + user.id, {
       id: user.id,
       name: user.name,
       email: user.email,
