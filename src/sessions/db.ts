@@ -1,7 +1,16 @@
 import redis from "redis";
+import { configDotenv } from "dotenv";
 
 // Create a client and connect to Redis server
-const url = process.env.REDIS_URL;
+configDotenv();
+let url = "";
+
+if (process.env.NODE_ENV !== "production") {
+  url = process.env.REDIS_URL;
+} else {
+  url = process.env.REDIS_DEV_URL;
+}
+
 const RedisClient = redis.createClient({
   url,
   socket: {
