@@ -2,14 +2,12 @@ import cors from "cors";
 import express from "express";
 import bodyParser, { json } from "body-parser";
 import { RedisClient } from "../sessions/db.js";
-import multer from "multer";
-import fs from "fs/promises";
-import path from "path";
 import { User } from "../models/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { configDotenv } from "dotenv";
 import authenticateJWT from "../middleware/middleware.js";
+import { v4 as uuidv4 } from "uuid";
 
 //#region Setup
 
@@ -30,8 +28,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 //#region Endpoints
 
 routes.post("/api/register", async (req, res) => {
-  const { email, password } = req.body;
-  console.log(email, password);
+  const { email, password, name } = req.body;
+  console.log(email, password, name);
 
   try {
     const userExists = await RedisClient.HEXISTS("users", email);
@@ -44,8 +42,22 @@ routes.post("/api/register", async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const user: User = {
+      id: uuidv4(),
+      name,
+      email,
+      password: hashedPassword,
+      institute_id: "",
+    };
+
     // Add the user with the hashed password to the Redis hash 'users'
-    await RedisClient.HSET("users", email, hashedPassword);
+    await RedisClient.HSET("users:", {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      password: user.password,
+      institute_id: user.institute_id,
+    });
 
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
