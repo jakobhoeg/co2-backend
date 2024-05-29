@@ -7,16 +7,23 @@ import fs from "fs/promises";
 import path from "path";
 import { User } from "../models/user.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { configDotenv } from "dotenv";
+import authenticateJWT from "../middleware/middleware.js";
 
 //#region Setup
 
 const routes = express();
+
+configDotenv();
 
 routes.use(cors());
 routes.use(express.static("public"));
 
 routes.use(bodyParser.urlencoded({ extended: false }));
 routes.use(bodyParser.json());
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 //#endregion
 
@@ -40,7 +47,7 @@ routes.post("/api/register", async (req, res) => {
     // Add the user with the hashed password to the Redis hash 'users'
     await RedisClient.HSET("users", email, hashedPassword);
 
-    res.status(201).send("User registered successfully");
+    res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     console.error("Error registering user:", error);
     res.status(500).send("Error registering user");
@@ -61,7 +68,16 @@ routes.post("/api/login", async (req, res) => {
       const passwordMatches = await bcrypt.compare(password, hashedPassword);
 
       if (passwordMatches) {
-        res.status(200).send("User logged in successfully");
+        // Generate JWT token
+        const token = jwt.sign({ email }, JWT_SECRET, {
+          expiresIn: "12h",
+        });
+
+        // Set the token in the response header
+        res.setHeader("Authorization", `Bearer ${token}`);
+        return res
+          .status(200)
+          .json({ message: "User logged in successfully", token });
       } else {
         res.status(401).send("Error logging in user");
       }
@@ -72,6 +88,11 @@ routes.post("/api/login", async (req, res) => {
     console.error("Error logging in user:", error);
     res.status(500).send("Error logging in user");
   }
+});
+
+// Test route for protected route
+routes.get("/api/protected", authenticateJWT, (req, res) => {
+  res.send("This is a protected route.");
 });
 
 //#endregion
