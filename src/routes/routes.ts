@@ -32,7 +32,7 @@ routes.post("/api/register", async (req, res) => {
   console.log(email, password, name);
 
   try {
-    const userExists = await RedisClient.HEXISTS("users", email);
+    const userExists = await RedisClient.HEXISTS("users:" + email, "email");
 
     if (userExists) {
       res.status(409).send("User already exists");
@@ -51,7 +51,7 @@ routes.post("/api/register", async (req, res) => {
     };
 
     // Add the user with the hashed password to the Redis hash 'users'
-    await RedisClient.HSET("users:" + user.id, {
+    await RedisClient.HSET("users:" + user.email, {
       id: user.id,
       name: user.name,
       email: user.email,
@@ -65,16 +65,19 @@ routes.post("/api/register", async (req, res) => {
     res.status(500).send("Error registering user");
   }
 });
-
 routes.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const userExists = await RedisClient.HEXISTS("users", email);
+    // Check if user exists by checking if the hash key exists
+    const userExists = await RedisClient.HEXISTS("users:" + email, "password");
 
     if (userExists) {
-      // Get the hashed password from the Redis hash 'users'
-      const hashedPassword = await RedisClient.HGET("users", email);
+      // Get the hashed password from the Redis hash
+      const hashedPassword = await RedisClient.HGET(
+        "users:" + email,
+        "password"
+      );
 
       // Compare the hashed password with the password provided
       const passwordMatches = await bcrypt.compare(password, hashedPassword);
@@ -91,10 +94,10 @@ routes.post("/api/login", async (req, res) => {
           .status(200)
           .json({ message: "User logged in successfully", token });
       } else {
-        res.status(401).send("Error logging in user");
+        res.status(401).send("Invalid email or password");
       }
     } else {
-      res.status(401).send("Error logging in user");
+      res.status(401).send("User does not exist");
     }
   } catch (error) {
     console.error("Error logging in user:", error);
