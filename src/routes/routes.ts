@@ -31,6 +31,47 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 //#region Endpoints
 
+// TODO: Delete this later after testing
+routes.post("/api/register/admin", async (req, res) => {
+  const { email, password, name, institution } = req.body;
+
+  try {
+    const userExists = await RedisClient.HEXISTS("user:" + email, "email");
+
+    if (userExists) {
+      res.status(409).send("User already exists");
+      return;
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user: User = {
+      id: uuidv4(),
+      name,
+      email,
+      password: hashedPassword,
+      institutionName: institution,
+      isAdmin: true,
+    };
+
+    // Add the user with the hashed password to the Redis hash 'users'
+    await RedisClient.HSET("user:" + user.email, {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      password: user.password,
+      institutionName: user.institutionName,
+      isAdmin: user.isAdmin.toString(),
+    });
+
+    res.status(201).json({ message: "Admin registered successfully" });
+  } catch (error) {
+    console.error("Error registering admin:", error);
+    res.status(500).send("Error registering admin");
+  }
+});
+
 routes.post("/api/register", authenticateAdmin, async (req, res) => {
   const { email, password, name, institution } = req.body;
 
