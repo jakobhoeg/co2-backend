@@ -192,9 +192,6 @@ routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
       serialNum,
       institutionName,
       roomName,
-      temperature: 0,
-      humidity: 0,
-      co2: 0,
       timestamp: strftime("%Y-%m-%d %H:%M:%S", new Date()),
     };
 
@@ -222,11 +219,19 @@ routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
       serialNum,
       institutionName,
       roomName,
-      temperature: sensor.temperature,
-      humidity: sensor.humidity,
-      co2: sensor.co2,
       timestamp: sensor.timestamp,
     });
+
+    // Initialize lists for sensor data
+    const temperatureKey = `sensor:${serialNum}:temperatures`;
+    const humidityKey = `sensor:${serialNum}:humidities`;
+    const co2Key = `sensor:${serialNum}:co2`;
+    const timestampKey = `sensor:${serialNum}:timestamps`;
+
+    await RedisClient.RPUSH(temperatureKey, "0"); // Initial value (can be zero or the first reading)
+    await RedisClient.RPUSH(humidityKey, "0"); // Initial value
+    await RedisClient.RPUSH(co2Key, "0"); // Initial value
+    await RedisClient.RPUSH(timestampKey, sensor.timestamp);
 
     res.status(201).json({ message: "Sensor created successfully" });
   } catch (error) {
@@ -248,12 +253,16 @@ routes.post("/api/sensor/data", async (req, res) => {
       return;
     }
 
-    await RedisClient.HSET("sensor:" + serialNum, {
-      temperature,
-      humidity,
-      co2,
-      timestamp,
-    });
+    // Append data to respective lists
+    const temperatureKey = `sensor:${serialNum}:temperatures`;
+    const humidityKey = `sensor:${serialNum}:humidities`;
+    const co2Key = `sensor:${serialNum}:co2`;
+    const timestampKey = `sensor:${serialNum}:timestamps`;
+
+    await RedisClient.RPUSH(temperatureKey, String(temperature));
+    await RedisClient.RPUSH(humidityKey, String(humidity));
+    await RedisClient.RPUSH(co2Key, String(co2));
+    await RedisClient.RPUSH(timestampKey, timestamp);
 
     res.status(201).json({ message: "Sensor data sent successfully" });
   } catch (error) {
