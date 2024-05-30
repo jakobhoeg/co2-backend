@@ -246,7 +246,10 @@ routes.post("/api/sensor/data", async (req, res) => {
 
   try {
     // Check if sensor exists
-    const sensorExists = await RedisClient.HEXISTS("sensor:" + serialNum, "id");
+    const sensorExists = await RedisClient.HEXISTS(
+      "sensor:" + serialNum,
+      "serialNum"
+    );
 
     if (!sensorExists) {
       res.status(404).send("Sensor does not exist");
