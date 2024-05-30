@@ -1,7 +1,7 @@
-interface Institute {
+interface Institution {
   id: string;
   name: string;
   address: string;
   city: string;
-  postal_code: string;
+  postalCode: string;
 }

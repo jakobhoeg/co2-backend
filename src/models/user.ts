@@ -3,6 +3,7 @@ interface User {
   name: string;
   email: string;
   password: string;
-  institute_id: string;
+  institutionName: string;
+  isAdmin?: boolean;
 }
 export { User };
