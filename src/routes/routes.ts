@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import { configDotenv } from "dotenv";
 import {
   authenticateAdmin,
+  authenticateDevice,
   authenticateUser,
 } from "../middleware/middleware.js";
 import { v4 as uuidv4 } from "uuid";
@@ -241,7 +242,7 @@ routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
 });
 
 // Endpoint for sending sensor data
-routes.post("/api/sensor/data", async (req, res) => {
+routes.post("/api/sensor/data", authenticateDevice, async (req, res) => {
   const { serialNum, temperature, humidity, co2, timestamp } = req.body;
 
   try {
