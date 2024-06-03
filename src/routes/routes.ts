@@ -32,6 +32,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 //#region Endpoints
 
+//#region Login and registration endpoints
+
 // TODO: Delete this later after testing
 routes.post("/api/register/admin", async (req, res) => {
   const { email, password, name, institution } = req.body;
@@ -136,9 +138,11 @@ routes.post("/api/login", async (req, res) => {
 
         // Set the token in the response header
         res.setHeader("Authorization", `Bearer ${token}`);
-        // Set the token in a cookie
-        res.cookie("token", token, { httpOnly: true });
-        return res.status(200).json({ message: "User logged in successfully" });
+        // res.cookie("token", token, { httpOnly: true });
+        return res.status(200).json({
+          message: "User logged in successfully",
+          token: token,
+        });
       } else {
         res.status(401).send("Invalid email or password");
       }
@@ -150,6 +154,16 @@ routes.post("/api/login", async (req, res) => {
     res.status(500).send("Error logging in user");
   }
 });
+
+routes.post("/api/logout", authenticateUser, async (req, res) => {
+  res.clearCookie("token");
+  res.setHeader("Authorization", "");
+  res.status(200).send("User logged out successfully");
+});
+
+//#endregion
+
+//#region Institution endpoints
 
 // Endpoint for creating an institution
 routes.post("/api/institution", authenticateAdmin, async (req, res) => {
@@ -180,6 +194,10 @@ routes.post("/api/institution", authenticateAdmin, async (req, res) => {
     res.status(500).send("Error creating institution");
   }
 });
+
+//#endregion
+
+//#region Sensor endpoints
 
 // Endpoint for creating a sensor
 routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
@@ -274,6 +292,8 @@ routes.post("/api/sensor/data", authenticateDevice, async (req, res) => {
     res.status(500).send("Error sending sensor data");
   }
 });
+
+//#endregion
 
 //#endregion
 
