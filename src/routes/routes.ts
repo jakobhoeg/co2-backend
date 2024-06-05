@@ -258,6 +258,30 @@ routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
   }
 });
 
+// Endpoint for getting sensor roomNames to display in frontend dropdown
+routes.get("/api/sensor", authenticateUser, async (req, res) => {
+  const user = req.user;
+
+  const institutionName = user.institutionName;
+
+  try {
+    const data = await getSensorData(institutionName);
+
+    // return only roomName and serialNum
+    const sensors = data.map((sensor) => {
+      return {
+        roomName: sensor.roomName,
+        serialNum: sensor.serialNum,
+      };
+    });
+
+    res.status(200).json(sensors);
+  } catch (error) {
+    console.error("Error getting sensors:", error);
+    res.status(500).send("Error getting sensors");
+  }
+});
+
 // Endpoint for sending sensor data
 routes.put("/api/sensor/data", authenticateDevice, async (req, res) => {
   const { serialNum, temperature, humidity, co2, timestamp } = req.body;
