@@ -10,6 +10,7 @@ import {
   authenticateAdmin,
   authenticateDevice,
   authenticateUser,
+  getSensorData,
 } from "../middleware/middleware.js";
 import { v4 as uuidv4 } from "uuid";
 import strftime from "strftime";
@@ -32,7 +33,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 //#region Endpoints
 
-//#region Login and registration endpoints
+//#region Authentication
 
 // TODO: Delete this later after testing
 routes.post("/api/register/admin", async (req, res) => {
@@ -138,11 +139,9 @@ routes.post("/api/login", async (req, res) => {
 
         // Set the token in the response header
         res.setHeader("Authorization", `Bearer ${token}`);
-        // res.cookie("token", token, { httpOnly: true });
-        return res.status(200).json({
-          message: "User logged in successfully",
-          token: "Bearer " + token,
-        });
+        // Set the token in a cookie
+        res.cookie("token", token, { httpOnly: true });
+        return res.status(200).json({ message: "User logged in successfully" });
       } else {
         res.status(401).send("Invalid email or password");
       }
@@ -163,7 +162,7 @@ routes.post("/api/logout", authenticateUser, async (req, res) => {
 
 //#endregion
 
-//#region Institution endpoints
+//#region Instution
 
 // Endpoint for creating an institution
 routes.post("/api/institution", authenticateAdmin, async (req, res) => {
@@ -197,7 +196,7 @@ routes.post("/api/institution", authenticateAdmin, async (req, res) => {
 
 //#endregion
 
-//#region Sensor endpoints
+//#region Sensor
 
 // Endpoint for creating a sensor
 routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
@@ -260,7 +259,7 @@ routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
 });
 
 // Endpoint for sending sensor data
-routes.post("/api/sensor/data", authenticateDevice, async (req, res) => {
+routes.put("/api/sensor/data", authenticateDevice, async (req, res) => {
   const { serialNum, temperature, humidity, co2, timestamp } = req.body;
 
   try {
@@ -290,6 +289,42 @@ routes.post("/api/sensor/data", authenticateDevice, async (req, res) => {
   } catch (error) {
     console.error("Error sending sensor data:", error);
     res.status(500).send("Error sending sensor data");
+  }
+});
+
+// GET: Endpoint for getting sensor data from the logged in user's institution
+routes.get("/api/sensor/data", authenticateUser, async (req, res) => {
+  const user = req.user;
+
+  console.log(user);
+
+  const institutionName = user.institutionName;
+  console.log(institutionName);
+
+  try {
+    const data = await getSensorData(institutionName);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error getting sensor data:", error);
+    res.status(500).send("Error getting sensor data");
+  }
+});
+
+// GET: Endpoint for getting all sensor data from a specific sensor in query params
+routes.get("/api/sensor/data/:roomName", authenticateUser, async (req, res) => {
+  const user = req.user;
+
+  const institutionName = user.institutionName;
+  const roomName = req.params.roomName.substring(1);
+  console.log(roomName);
+
+  try {
+    const data = await getSensorData(institutionName, roomName);
+
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error getting sensor data:", error);
+    res.status(500).send("Error getting sensor data");
   }
 });
 
