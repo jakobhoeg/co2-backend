@@ -7,7 +7,7 @@ configDotenv();
 
 const DEVICE_SECRET = process.env.DEVICE_SECRET;
 
-// Function to authenticate a JSON Web Token. It returns the decoded user email if the token is valid.
+// Function to authenticate a JSON Web Token. It returns the decoded user if the token is valid.
 const authenticateUser = (req, res, next) => {
   const token = req.header("Authorization");
 
@@ -19,7 +19,7 @@ const authenticateUser = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(tokenWithoutBearer, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded.user;
     console.log(req.user);
     next();
   } catch (ex) {
@@ -38,11 +38,11 @@ const authenticateAdmin = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(tokenWithoutBearer, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded.user;
     console.log(req.user);
 
     // Check if the user is an admin
-    if (req.user.user.isAdmin === "true") {
+    if (req.user.isAdmin === "true") {
       next();
     } else {
       res.status(403).send("Access denied.");
@@ -95,4 +95,65 @@ const authenticateDevice = async (req, res, next) => {
   }
 };
 
-export { authenticateUser, authenticateAdmin, authenticateDevice };
+const getSensorData = async (institutionName, roomName = null) => {
+  try {
+    // Get all sensors in the institution
+    const sensors = await RedisClient.KEYS("sensor:*");
+
+    // Extract the serial numbers from the sensors
+    const sensorsExtracted = sensors.map((sensor) => sensor.split(":")[1]);
+
+    const sensorData = [];
+    const serialNums = [];
+
+    for (const sensor of sensorsExtracted) {
+      // Get only the serial number from the sensor key
+      // IF the serial number is already in the serialNums array, skip it
+      if (serialNums.includes(sensor)) {
+        continue;
+      }
+      serialNums.push(sensor);
+      // Get all data for each sensor
+      const data = await RedisClient.HGETALL("sensor:" + sensor);
+      sensorData.push(data);
+    }
+
+    // Filter sensorData by institutionName and optionally by roomName
+    const filteredSensorData = sensorData.filter((data) => {
+      return (
+        data.institutionName === institutionName &&
+        (roomName === null || data.roomName === roomName)
+      );
+    });
+
+    // Get the data for each sensor
+    for (const sensor of filteredSensorData) {
+      const temperatureKey = `sensor:${sensor.serialNum}:temperatures`;
+      const humidityKey = `sensor:${sensor.serialNum}:humidities`;
+      const co2Key = `sensor:${sensor.serialNum}:co2`;
+      const timestampKey = `sensor:${sensor.serialNum}:timestamps`;
+
+      const temperatures = await RedisClient.LRANGE(temperatureKey, 0, -1);
+      const humidities = await RedisClient.LRANGE(humidityKey, 0, -1);
+      const co2 = await RedisClient.LRANGE(co2Key, 0, -1);
+      const timestamps = await RedisClient.LRANGE(timestampKey, 0, -1);
+
+      sensor.temperatures = temperatures;
+      sensor.humidities = humidities;
+      sensor.co2 = co2;
+      sensor.timestamps = timestamps;
+    }
+
+    return filteredSensorData;
+  } catch (error) {
+    console.error("Error getting sensor data:", error);
+    throw new Error("Error getting sensor data");
+  }
+};
+
+export {
+  authenticateUser,
+  authenticateAdmin,
+  authenticateDevice,
+  getSensorData,
+};

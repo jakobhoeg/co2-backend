@@ -1,7 +1,9 @@
 import { User } from "./src/models/user";
 
-declare namespace Express {
-  export interface Request {
-    user?: User;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
   }
 }
