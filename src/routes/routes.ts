@@ -141,7 +141,10 @@ routes.post("/api/login", async (req, res) => {
         res.setHeader("Authorization", `Bearer ${token}`);
         // Set the token in a cookie
         res.cookie("token", token, { httpOnly: true });
-        return res.status(200).json({ message: "User logged in successfully" });
+        return res.status(200).json({
+          message: "User logged in successfully",
+          token: "Bearer " + token,
+        });
       } else {
         res.status(401).send("Invalid email or password");
       }
