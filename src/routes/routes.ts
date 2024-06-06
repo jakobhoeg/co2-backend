@@ -249,9 +249,9 @@ routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
     const co2Key = `sensor:${serialNum}:co2`;
     const timestampKey = `sensor:${serialNum}:timestamps`;
 
-    await RedisClient.RPUSH(temperatureKey, "0"); // Initial value (can be zero or the first reading)
-    await RedisClient.RPUSH(humidityKey, "0"); // Initial value
-    await RedisClient.RPUSH(co2Key, "0"); // Initial value
+    await RedisClient.RPUSH(temperatureKey, "0");
+    await RedisClient.RPUSH(humidityKey, "0");
+    await RedisClient.RPUSH(co2Key, "0");
     await RedisClient.RPUSH(timestampKey, sensor.timestamp);
 
     res.status(201).json({ message: "Sensor created successfully" });
@@ -270,11 +270,10 @@ routes.get("/api/sensor", authenticateUser, async (req, res) => {
   try {
     const data = await getSensorData(institutionName);
 
-    // return only roomName and serialNum
+    // return only roomName
     const sensors = data.map((sensor) => {
       return {
         roomName: sensor.roomName,
-        serialNum: sensor.serialNum,
       };
     });
 
