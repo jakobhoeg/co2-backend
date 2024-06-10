@@ -289,13 +289,20 @@ routes.delete("/api/sensor/:serialNum", authenticateAdmin, async (req, res) => {
   const { serialNum } = req.params;
 
   try {
+    console.log("Received serialNum for deletion:", serialNum);
+
     const sensorExists = await RedisClient.HEXISTS("sensor:" + serialNum, "id");
+
+    console.log(`Sensor exists check for ${serialNum}:`, sensorExists);
 
     if (!sensorExists) {
       return res.status(404).send("Sensor not found");
     }
 
+    // Delete the sensor key
     await RedisClient.DEL("sensor:" + serialNum);
+
+    console.log(`Sensor key deleted for ${serialNum}`);
 
     const temperatureKey = `sensor:${serialNum}:temperatures`;
     const humidityKey = `sensor:${serialNum}:humidities`;
@@ -307,12 +314,15 @@ routes.delete("/api/sensor/:serialNum", authenticateAdmin, async (req, res) => {
     await RedisClient.DEL(co2Key);
     await RedisClient.DEL(timestampKey);
 
+    console.log(`Related data keys deleted for ${serialNum}`);
+
     res.status(200).json({ message: "Sensor deleted successfully" });
   } catch (error) {
     console.error("Error deleting sensor:", error);
     res.status(500).send("Error deleting sensor");
   }
 });
+
 
 
 // Endpoint for sending sensor data
