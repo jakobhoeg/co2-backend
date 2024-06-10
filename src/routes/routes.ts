@@ -286,7 +286,7 @@ routes.get("/api/sensor", authenticateUser, async (req, res) => {
 
 // DELETE: Endpoint for deleting a sensor
 routes.delete("/api/sensor/:serialNum", authenticateAdmin, async (req, res) => {
-  const { serialNum } = req.params;
+  const serialNum = req.params.serialNum;
 
   try {
     console.log("Received serialNum for deletion:", serialNum);
@@ -322,6 +322,7 @@ routes.delete("/api/sensor/:serialNum", authenticateAdmin, async (req, res) => {
     res.status(500).send("Error deleting sensor");
   }
 });
+
 
 
 
