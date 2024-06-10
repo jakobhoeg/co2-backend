@@ -6,13 +6,15 @@ import { RedisClient } from "../sessions/db.js";
 configDotenv();
 
 const DEVICE_SECRET = process.env.DEVICE_SECRET;
+const BLACKLISTED_TOKEN_KEY = "blacklistedTokens";
 
 // Function to authenticate a JSON Web Token. It returns the decoded user if the token is valid.
-const authenticateUser = (req, res, next) => {
+const authenticateUser = async (req, res, next) => {
   const token = req.header("Authorization");
+  const refreshToken = req.headers.cookie;
 
-  if (!token) {
-    return res.status(401).send("Access denied.");
+  if (!token && !refreshToken) {
+    return res.status(403).send("Access denied.");
   }
 
   const tokenWithoutBearer = token.split(" ")[1];
@@ -23,7 +25,38 @@ const authenticateUser = (req, res, next) => {
     console.log(req.user);
     next();
   } catch (ex) {
-    res.status(400).send("Invalid token.");
+    if (!refreshToken) {
+      return res.status(400).send("Invalid token.");
+    }
+
+    const refreshTokenSplit = req.headers.cookie.split("=")[1];
+
+    // Check database for blacklisted refresh tokens
+    const blacklisted = await RedisClient.SISMEMBER(
+      BLACKLISTED_TOKEN_KEY,
+      refreshToken
+    );
+
+    if (blacklisted) {
+      return res.status(403).send("Access denied.");
+    }
+
+    // Verify the refresh token and send 401 because the access token is expired
+    // to indicate that the user needs to get a new access token
+    try {
+      const decoded = jwt.verify(refreshTokenSplit, process.env.JWT_SECRET);
+
+      res
+        .cookie("refreshToken", refreshTokenSplit, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+        })
+        .status(401)
+        .send(decoded.user);
+    } catch (ex) {
+      console.error("Error verifying refresh token:", ex);
+      res.status(400).send("Invalid token.");
+    }
   }
 };
 
@@ -31,7 +64,7 @@ const authenticateAdmin = (req, res, next) => {
   const token = req.header("Authorization");
 
   if (!token) {
-    return res.status(401).send("Access denied.");
+    return res.status(403).send("Access denied.");
   }
 
   const tokenWithoutBearer = token.split(" ")[1];
@@ -56,7 +89,7 @@ const authenticateDevice = async (req, res, next) => {
   const token = req.header("Authorization");
 
   if (!token) {
-    return res.status(401).send("Access denied.");
+    return res.status(403).send("Access denied.");
   }
 
   const tokenWithoutBearer = token.split(" ")[1];

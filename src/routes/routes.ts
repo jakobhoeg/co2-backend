@@ -28,6 +28,7 @@ routes.use(bodyParser.urlencoded({ extended: false }));
 routes.use(bodyParser.json());
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const BLACKLISTED_TOKEN_KEY = "blacklistedTokens";
 
 //#endregion
 
@@ -119,46 +120,93 @@ routes.post("/api/register", authenticateAdmin, async (req, res) => {
 routes.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
+  // Check if user exists by checking if the hash key exists
+  const userExists = await RedisClient.HEXISTS("user:" + email, "password");
+
+  if (!userExists) {
+    res.status(403).send("User does not exist");
+    return;
+  }
+
+  // Get the user from the Redis hash
+  const user = await RedisClient.HGETALL("user:" + email);
+  console.log(user);
+
+  // Compare the hashed password with the password provided
+  const passwordMatches = await bcrypt.compare(password, user.password);
+
+  if (!passwordMatches) {
+    res.status(403).send("Invalid email or password");
+    return;
+  }
+
   try {
-    // Check if user exists by checking if the hash key exists
-    const userExists = await RedisClient.HEXISTS("user:" + email, "password");
+    // Generate JWT token
+    const token = jwt.sign({ user }, JWT_SECRET, {
+      expiresIn: 30,
+    });
+    const refreshToken = jwt.sign({ user }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
-    if (userExists) {
-      // Get the user from the Redis hash
-      const user = await RedisClient.HGETALL("user:" + email);
-      console.log(user);
-
-      // Compare the hashed password with the password provided
-      const passwordMatches = await bcrypt.compare(password, user.password);
-
-      if (passwordMatches) {
-        // Generate JWT token
-        const token = jwt.sign({ user }, JWT_SECRET, {
-          expiresIn: "1h",
-        });
-
-        // Set the token in the response header
-        res.setHeader("Authorization", `Bearer ${token}`);
-        // Set the token in a cookie
-        res.cookie("token", token, { httpOnly: true });
-        return res.status(200).json({
-          message: "User logged in successfully",
-          token: "Bearer " + token,
-        });
-      } else {
-        res.status(401).send("Invalid email or password");
-      }
-    } else {
-      res.status(401).send("User does not exist");
-    }
+    // Set the refresh token as a cookie, access token as a header and send the user object
+    res
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      })
+      .header("Authorization", `Bearer ${token}`)
+      .send({ user, token: "Bearer " + token });
   } catch (error) {
-    console.error("Error logging in user:", error);
-    res.status(500).send("Error logging in user");
+    console.error("Error logging in:", error);
+    res.status(500).send("Error logging in");
   }
 });
 
-routes.post("/api/logout", authenticateUser, async (req, res) => {
-  res.clearCookie("token");
+routes.post("/api/refresh", async (req, res) => {
+  const refreshToken = req.headers.cookie;
+
+  if (!refreshToken) {
+    return res.status(403).send("Access Denied. No refresh token provided.");
+  }
+
+  // Check database to see if refresh token is blacklisted (logged out)
+  const blacklisted = await RedisClient.SISMEMBER(
+    BLACKLISTED_TOKEN_KEY,
+    refreshToken
+  );
+
+  if (blacklisted) {
+    return res.status(403).send("Access denied.");
+  }
+
+  const refreshTokenSplit = refreshToken.split("=")[1];
+
+  try {
+    const decoded = jwt.verify(refreshTokenSplit, JWT_SECRET);
+    const accessToken = jwt.sign({ user: decoded.user }, JWT_SECRET, {
+      expiresIn: 30,
+    });
+
+    res
+      .header("Authorization", "Bearer " + accessToken)
+      .status(200)
+      .send({
+        user: decoded.user,
+        token: "Bearer " + accessToken,
+      });
+  } catch (error) {
+    return res.status(403).send("Invalid refresh token.");
+  }
+});
+
+routes.post("/api/logout", async (req, res) => {
+  const refreshToken = req.headers.cookie;
+
+  // Add the token to database as blacklisted
+  await RedisClient.SADD(BLACKLISTED_TOKEN_KEY, refreshToken);
+
+  res.clearCookie("refreshToken");
   res.setHeader("Authorization", "");
   res.status(200).send("User logged out successfully");
 });
@@ -322,9 +370,6 @@ routes.delete("/api/sensor/:serialNum", authenticateAdmin, async (req, res) => {
     res.status(500).send("Error deleting sensor");
   }
 });
-
-
-
 
 // Endpoint for sending sensor data
 routes.put("/api/sensor/data", authenticateDevice, async (req, res) => {
