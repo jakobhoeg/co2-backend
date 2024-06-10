@@ -144,7 +144,7 @@ const getSensorData = async (institutionName, roomName = null) => {
       sensor.timestamps = timestamps;
     }
 
-    return filteredSensorData;
+    return { sensors: filteredSensorData };
   } catch (error) {
     console.error("Error getting sensor data:", error);
     throw new Error("Error getting sensor data");

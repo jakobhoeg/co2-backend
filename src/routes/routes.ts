@@ -271,7 +271,7 @@ routes.get("/api/sensor", authenticateUser, async (req, res) => {
     const data = await getSensorData(institutionName);
 
     // return only roomName
-    const sensors = data.map((sensor) => {
+    const sensors = data.sensors.map((sensor) => {
       return {
         roomName: sensor.roomName,
       };
