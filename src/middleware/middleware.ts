@@ -46,13 +46,9 @@ const authenticateUser = async (req, res, next) => {
     try {
       const decoded = jwt.verify(refreshTokenSplit, process.env.JWT_SECRET);
 
-      res
-        .cookie("refreshToken", refreshTokenSplit, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-        })
-        .status(401)
-        .send(decoded.user);
+      res.status(401).send({ user: decoded.user, refreshToken: refreshTokenSplit });
+
+
     } catch (ex) {
       console.error("Error verifying refresh token:", ex);
       res.status(400).send("Invalid token.");
