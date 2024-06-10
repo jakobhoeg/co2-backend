@@ -7,6 +7,8 @@ let url = "";
 
 if (process.env.NODE_ENV === "development") {
   url = process.env.REDIS_DEV_URL;
+} else if (process.env.NODE_ENV === "docker") {
+  url = process.env.REDIS_DOCKER_URL;
 } else {
   url = process.env.REDIS_URL;
 }
