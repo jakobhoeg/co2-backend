@@ -48,11 +48,11 @@ const authenticateUser = async (req, res, next) => {
 
       res
         .cookie("refreshToken", refreshTokenSplit, {
-          httpOnly: false,
-          sameSite: "none",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
         })
         .status(401)
-        .send(decoded.user);
+        .send("Access token expired.");
     } catch (ex) {
       console.error("Error verifying refresh token:", ex);
       res.status(400).send("Invalid token.");

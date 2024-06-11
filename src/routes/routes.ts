@@ -21,7 +21,7 @@ const routes = express();
 
 configDotenv();
 
-routes.use(cors({ credentials: true }));
+routes.use(cors());
 routes.use(express.static("public"));
 
 routes.use(bodyParser.urlencoded({ extended: false }));
@@ -143,7 +143,7 @@ routes.post("/api/login", async (req, res) => {
   try {
     // Generate JWT token
     const token = jwt.sign({ user }, JWT_SECRET, {
-      expiresIn: 30,
+      expiresIn: "1h",
     });
     const refreshToken = jwt.sign({ user }, JWT_SECRET, {
       expiresIn: "7d",
@@ -152,11 +152,14 @@ routes.post("/api/login", async (req, res) => {
     // Set the refresh token as a cookie, access token as a header and send the user object
     res
       .cookie("refreshToken", refreshToken, {
-        httpOnly: false,
-        sameSite: "none",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
       })
       .header("Authorization", `Bearer ${token}`)
-      .send({ user, token: "Bearer " + token });
+      .send({
+        message: "User successfully logged in",
+        token: "Bearer " + token,
+      });
   } catch (error) {
     console.error("Error logging in:", error);
     res.status(500).send("Error logging in");
@@ -185,7 +188,7 @@ routes.post("/api/refresh", async (req, res) => {
   try {
     const decoded = jwt.verify(refreshTokenSplit, JWT_SECRET);
     const accessToken = jwt.sign({ user: decoded.user }, JWT_SECRET, {
-      expiresIn: 30,
+      expiresIn: "1h",
     });
 
     res
