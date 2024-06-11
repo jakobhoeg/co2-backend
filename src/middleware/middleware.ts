@@ -13,6 +13,9 @@ const authenticateUser = async (req, res, next) => {
   const token = req.header("Authorization");
   const refreshToken = req.headers.cookie;
 
+  console.log("Access Token: " + token);
+  console.log("Refresh Token: " + refreshToken);
+
   if (!token && !refreshToken) {
     return res.status(403).send("Access denied.");
   }
@@ -62,8 +65,12 @@ const authenticateUser = async (req, res, next) => {
 
 const authenticateAdmin = (req, res, next) => {
   const token = req.header("Authorization");
+  const refreshToken = req.headers.cookie;
 
-  if (!token) {
+  console.log("Access Token: " + token);
+  console.log("Refresh Token: " + refreshToken);
+
+  if (!token && !refreshToken) {
     return res.status(403).send("Access denied.");
   }
 
