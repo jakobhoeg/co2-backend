@@ -152,7 +152,7 @@ routes.post("/api/login", async (req, res) => {
     // Set the refresh token as a cookie, access token as a header and send the user object
     res
       .cookie("refreshToken", refreshToken, {
-        httpOnly: true,
+        httpOnly: false,
         sameSite: "none",
       })
       .header("Authorization", `Bearer ${token}`)
