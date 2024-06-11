@@ -157,7 +157,7 @@ routes.post("/api/login", async (req, res) => {
       })
       .header("Authorization", `Bearer ${token}`)
       .send({
-        message: "User successfully logged in",
+        user,
         token: "Bearer " + token,
       });
   } catch (error) {
