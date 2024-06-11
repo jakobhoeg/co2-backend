@@ -49,7 +49,6 @@ const authenticateUser = async (req, res, next) => {
       res
         .cookie("refreshToken", refreshTokenSplit, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
           sameSite: "none",
         })
         .status(401)
