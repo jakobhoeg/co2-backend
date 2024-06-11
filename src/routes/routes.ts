@@ -21,7 +21,7 @@ const routes = express();
 
 configDotenv();
 
-routes.use(cors());
+routes.use(cors({ credentials: true }));
 routes.use(express.static("public"));
 
 routes.use(bodyParser.urlencoded({ extended: false }));
@@ -152,8 +152,8 @@ routes.post("/api/login", async (req, res) => {
     // Set the refresh token as a cookie, access token as a header and send the user object
     res
       .cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        httpOnly: false,
+        sameSite: "none",
       })
       .header("Authorization", `Bearer ${token}`)
       .send({ user, token: "Bearer " + token });
