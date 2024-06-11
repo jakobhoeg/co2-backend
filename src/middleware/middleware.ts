@@ -50,6 +50,7 @@ const authenticateUser = async (req, res, next) => {
         .cookie("refreshToken", refreshTokenSplit, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
+          sameSite: "none",
         })
         .status(401)
         .send(decoded.user);

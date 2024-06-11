@@ -154,6 +154,7 @@ routes.post("/api/login", async (req, res) => {
       .cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
       })
       .header("Authorization", `Bearer ${token}`)
       .send({ user, token: "Bearer " + token });
