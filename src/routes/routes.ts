@@ -21,7 +21,7 @@ const routes = express();
 
 configDotenv();
 
-routes.use(cors());
+routes.use(cors({ credentials: true }));
 routes.use(express.static("public"));
 
 routes.use(bodyParser.urlencoded({ extended: false }));
