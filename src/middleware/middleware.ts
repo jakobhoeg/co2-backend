@@ -13,9 +13,6 @@ const authenticateUser = async (req, res, next) => {
   const token = req.header("Authorization");
   const refreshToken = req.headers.cookie;
 
-  console.log("Access Token: " + token);
-  console.log("Refresh Token: " + refreshToken);
-
   if (!token && !refreshToken) {
     return res.status(403).send("Access denied.");
   }
@@ -63,12 +60,9 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-const authenticateAdmin = (req, res, next) => {
+const authenticateAdmin = async (req, res, next) => {
   const token = req.header("Authorization");
   const refreshToken = req.headers.cookie;
-
-  console.log("Access Token: " + token);
-  console.log("Refresh Token: " + refreshToken);
 
   if (!token && !refreshToken) {
     return res.status(403).send("Access denied.");
@@ -79,16 +73,45 @@ const authenticateAdmin = (req, res, next) => {
   try {
     const decoded = jwt.verify(tokenWithoutBearer, process.env.JWT_SECRET);
     req.user = decoded.user;
-    console.log(req.user);
 
-    // Check if the user is an admin
-    if (req.user.isAdmin === "true") {
-      next();
-    } else {
-      res.status(403).send("Access denied.");
+    if (!req.user.isAdmin) {
+      return res.status(403).send("Access denied.");
     }
+
+    next();
   } catch (ex) {
-    res.status(400).send("Invalid token.");
+    if (!refreshToken) {
+      return res.status(400).send("Invalid token.");
+    }
+
+    const refreshTokenSplit = req.headers.cookie.split("=")[1];
+
+    // Check database for blacklisted refresh tokens
+    const blacklisted = await RedisClient.SISMEMBER(
+      BLACKLISTED_TOKEN_KEY,
+      refreshToken
+    );
+
+    if (blacklisted) {
+      return res.status(403).send("Access denied.");
+    }
+
+    // Verify the refresh token and send 401 because the access token is expired
+    // to indicate that the user needs to get a new access token
+    try {
+      const decoded = jwt.verify(refreshTokenSplit, process.env.JWT_SECRET);
+
+      res
+        .cookie("refreshToken", refreshTokenSplit, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+        })
+        .status(401)
+        .send("Access token expired.");
+    } catch (ex) {
+      console.error("Error verifying refresh token:", ex);
+      res.status(400).send("Invalid token.");
+    }
   }
 };
 
