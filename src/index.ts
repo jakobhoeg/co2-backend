@@ -9,8 +9,16 @@ import { getMessaging } from "firebase-admin/messaging";
 
 configDotenv();
 
+const serviceAccount = JSON.parse(
+  Buffer.from(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64,
+    "base64"
+  ).toString("utf-8")
+);
+
+// Initialize Firebase Admin SDK
 admin.initializeApp({
-  credential: admin.credential.cert(process.env.GOOGLE_APLICATION_CREDENTIALS),
+  credential: admin.credential.cert(serviceAccount),
   projectId: "airqual-9022b",
 });
 
