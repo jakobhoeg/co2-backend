@@ -218,6 +218,27 @@ routes.post("/api/logout", async (req, res) => {
   res.status(200).send("User logged out successfully");
 });
 
+routes.post("/api/fcm", authenticateUser, async (req, res) => {
+  const { fcmToken } = req.body;
+
+  if (!fcmToken) {
+    return res.status(400).send("FCM token not provided");
+  }
+
+  const user = req.user;
+
+  try {
+    await RedisClient.HSET("user:" + user.email, {
+      fcmToken: fcmToken,
+    });
+
+    res.status(200).send("FCM token saved successfully");
+  } catch (error) {
+    console.error("Error saving FCM token:", error);
+    res.status(500).send("Error saving FCM token");
+  }
+});
+
 //#endregion
 
 //#region Instution
