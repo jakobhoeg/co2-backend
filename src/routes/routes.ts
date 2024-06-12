@@ -4,7 +4,7 @@ import bodyParser, { json } from "body-parser";
 import { RedisClient } from "../sessions/db.js";
 import { User } from "../models/user.js";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { configDotenv } from "dotenv";
 import {
   authenticateAdmin,
@@ -186,10 +186,14 @@ routes.post("/api/refresh", async (req, res) => {
   const refreshTokenSplit = refreshToken.split("=")[1];
 
   try {
-    const decoded = jwt.verify(refreshTokenSplit, JWT_SECRET);
-    const accessToken = jwt.sign({ user: decoded.user }, JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    const decoded = jwt.verify(refreshTokenSplit, JWT_SECRET) as JwtPayload;
+    const accessToken = jwt.sign(
+      { user: (decoded as { user: User }).user },
+      JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
 
     res
       .header("Authorization", "Bearer " + accessToken)

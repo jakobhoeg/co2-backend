@@ -1,5 +1,5 @@
 import { configDotenv } from "dotenv";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import crypto from "crypto";
 import { RedisClient } from "../sessions/db.js";
 
@@ -20,7 +20,10 @@ const authenticateUser = async (req, res, next) => {
   const tokenWithoutBearer = token.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(tokenWithoutBearer, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      tokenWithoutBearer,
+      process.env.JWT_SECRET
+    ) as JwtPayload;
     req.user = decoded.user;
     console.log(req.user);
     next();
@@ -71,7 +74,10 @@ const authenticateAdmin = async (req, res, next) => {
   const tokenWithoutBearer = token.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(tokenWithoutBearer, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      tokenWithoutBearer,
+      process.env.JWT_SECRET
+    ) as JwtPayload;
     req.user = decoded.user;
 
     if (!req.user.isAdmin) {

@@ -3,8 +3,16 @@ import { configDotenv } from "dotenv";
 import cron from "node-cron";
 import strftime from "strftime";
 import { RedisClient } from "./sessions/db.js";
+import { initializeApp, applicationDefault } from "firebase-admin/app";
+import admin from "firebase-admin";
+import { getMessaging } from "firebase-admin/messaging";
 
 configDotenv();
+
+admin.initializeApp({
+  credential: admin.credential.cert(process.env.GOOGLE_APLICATION_CREDENTIALS),
+  projectId: "airqual-9022b",
+});
 
 // Ensure that the port is always a number by parsing it
 const port = parseInt(process.env.PORT);
@@ -67,3 +75,26 @@ async function checkAndDeleteOldData() {
 
 // Schedule the cron job to run at 00:00 on the 1st day of every month
 cron.schedule("0 0 1 * *", checkAndDeleteOldData);
+
+const registrationToken =
+  "e7b3N6JGTRGQ_2k8Di9NuT:APA91bHIc1jWXCAc6oFV9-6WAsi45F8Z_a1glE9gniR0RBTphW30S1f8M9l7d2hlKWOZvAD-3C5VdfBsWMh-ZvepKUid9OjRiZ5q8X934R5IpsGydmYjSelaphAc4AtZF_ZrRFOcY_Ag";
+
+const message = {
+  notification: {
+    title: "GG",
+    body: "WP",
+  },
+  token: registrationToken,
+};
+
+// Send a message to the device corresponding to the provided
+// registration token.
+getMessaging()
+  .send(message)
+  .then((response) => {
+    // Response is a message ID string.
+    console.log("Successfully sent message:", response);
+  })
+  .catch((error) => {
+    console.log("Error sending message:", error);
+  });
