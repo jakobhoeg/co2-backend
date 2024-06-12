@@ -81,6 +81,10 @@ routes.post("/api/register/admin", async (req, res) => {
 routes.post("/api/register", authenticateAdmin, async (req, res) => {
   const { email, password, name, institution } = req.body;
 
+  if (!email || !password || !name || !institution) {
+    return res.status(400).send("Missing required fields");
+  }
+
   try {
     const userExists = await RedisClient.HEXISTS("user:" + email, "email");
 
@@ -120,6 +124,10 @@ routes.post("/api/register", authenticateAdmin, async (req, res) => {
 
 routes.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).send("Missing required fields");
+  }
 
   // Check if user exists by checking if the hash key exists
   const userExists = await RedisClient.HEXISTS("user:" + email, "password");
@@ -248,6 +256,10 @@ routes.post("/api/fcm", authenticateUser, async (req, res) => {
 routes.post("/api/institution", authenticateAdmin, async (req, res) => {
   const { name, address, city, postalCode } = req.body;
 
+  if (!name || !address || !city || !postalCode) {
+    return res.status(400).send("Missing required fields");
+  }
+
   try {
     const institutionId = uuidv4();
 
@@ -281,6 +293,10 @@ routes.post("/api/institution", authenticateAdmin, async (req, res) => {
 // Endpoint for creating a sensor
 routes.post("/api/sensor", authenticateAdmin, async (req, res) => {
   const { serialNum, institutionName, roomName } = req.body;
+
+  if (!serialNum || !institutionName || !roomName) {
+    return res.status(400).send("Missing required fields");
+  }
 
   try {
     const sensorId = uuidv4();
@@ -365,6 +381,10 @@ routes.get("/api/sensor", authenticateUser, async (req, res) => {
 routes.delete("/api/sensor/:serialNum", authenticateAdmin, async (req, res) => {
   const serialNum = req.params.serialNum;
 
+  if (!serialNum) {
+    return res.status(400).send("Missing required fields");
+  }
+
   try {
     console.log("Received serialNum for deletion:", serialNum);
 
@@ -403,6 +423,10 @@ routes.delete("/api/sensor/:serialNum", authenticateAdmin, async (req, res) => {
 // Endpoint for sending sensor data
 routes.put("/api/sensor/data", authenticateDevice, async (req, res) => {
   const { serialNum, temperature, humidity, co2, timestamp } = req.body;
+
+  if (!serialNum || !temperature || !humidity || !co2 || !timestamp) {
+    return res.status(400).send("Missing required fields");
+  }
 
   try {
     // Check if sensor exists
@@ -470,8 +494,6 @@ routes.put("/api/sensor/data", authenticateDevice, async (req, res) => {
           });
       }
     }
-
-    console.log("Push notifications sent");
 
     res.status(201).json({ message: "Sensor data sent successfully" });
   } catch (error) {
