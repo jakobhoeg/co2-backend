@@ -5,5 +5,6 @@ interface User {
   password: string;
   institutionName: string;
   isAdmin?: boolean;
+  fcmToken?: string;
 }
 export { User };

@@ -14,6 +14,7 @@ import {
 } from "../middleware/middleware.js";
 import { v4 as uuidv4 } from "uuid";
 import strftime from "strftime";
+import { getMessaging } from "firebase-admin/messaging";
 
 //#region Setup
 
@@ -425,6 +426,52 @@ routes.put("/api/sensor/data", authenticateDevice, async (req, res) => {
     await RedisClient.RPUSH(humidityKey, String(humidity));
     await RedisClient.RPUSH(co2Key, String(co2));
     await RedisClient.RPUSH(timestampKey, timestamp);
+
+    // Check if CO2 level is above 1000 ppm and send a push notification to all users in the institution (this is just a proof of concept)
+    if (co2 > 1000) {
+      // Find the sensor's institution
+      const sensor = await RedisClient.HGETALL("sensor:" + serialNum);
+      const institutionName = sensor.institutionName;
+
+      // Find all users with the same institution
+      const users = await RedisClient.KEYS("user:*");
+      const usersWithSameInstitution = [];
+
+      for (const userKey of users) {
+        const user = await RedisClient.HGETALL(userKey);
+        if (user.institutionName === institutionName) {
+          usersWithSameInstitution.push(user);
+        }
+      }
+
+      // Get the FCM tokens of the users
+      const fcmTokens = usersWithSameInstitution
+        .map((user) => user.fcmToken)
+        .filter((token) => token); // Filter out users without FCM tokens
+
+      // Send push notifications to the users
+      for (const fcmToken of fcmTokens) {
+        const message = {
+          notification: {
+            title: "Højt CO2-niveau",
+            body: "CO2 niveauet er over 1000 ppm for " + sensor.roomName,
+          },
+          token: fcmToken,
+        };
+
+        getMessaging()
+          .send(message)
+          .then((response) => {
+            // Response is a message ID string.
+            console.log("Successfully sent message:", response);
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
+    }
+
+    console.log("Push notifications sent");
 
     res.status(201).json({ message: "Sensor data sent successfully" });
   } catch (error) {
