@@ -158,30 +158,28 @@ const authenticateDevice = async (req, res, next) => {
   }
 };
 
-const getSensorData = async (institutionName, roomName = null) => {
+const getSensorData = async (
+  institutionName,
+  roomName = null,
+  hours = null,
+  days = null
+) => {
   try {
-    // Get all sensors in the institution
     const sensors = await RedisClient.KEYS("sensor:*");
-
-    // Extract the serial numbers from the sensors
     const sensorsExtracted = sensors.map((sensor) => sensor.split(":")[1]);
 
     const sensorData = [];
     const serialNums = [];
 
     for (const sensor of sensorsExtracted) {
-      // Get only the serial number from the sensor key
-      // IF the serial number is already in the serialNums array, skip it
       if (serialNums.includes(sensor)) {
         continue;
       }
       serialNums.push(sensor);
-      // Get all data for each sensor
       const data = await RedisClient.HGETALL("sensor:" + sensor);
       sensorData.push(data);
     }
 
-    // Filter sensorData by institutionName and optionally by roomName
     const filteredSensorData = sensorData.filter((data) => {
       return (
         data.institutionName === institutionName &&
@@ -189,7 +187,15 @@ const getSensorData = async (institutionName, roomName = null) => {
       );
     });
 
-    // Get the data for each sensor
+    const now = Date.now();
+    let timeLimit = null;
+
+    if (hours !== null) {
+      timeLimit = hours * 3600 * 1000;
+    } else if (days !== null) {
+      timeLimit = days * 24 * 3600 * 1000;
+    }
+
     for (const sensor of filteredSensorData) {
       const temperatureKey = `sensor:${sensor.serialNum}:temperatures`;
       const humidityKey = `sensor:${sensor.serialNum}:humidities`;
@@ -201,10 +207,35 @@ const getSensorData = async (institutionName, roomName = null) => {
       const co2 = await RedisClient.LRANGE(co2Key, 0, -1);
       const timestamps = await RedisClient.LRANGE(timestampKey, 0, -1);
 
-      sensor.temperatures = temperatures;
-      sensor.humidities = humidities;
-      sensor.co2 = co2;
-      sensor.timestamps = timestamps;
+      // Filter data based on time limit
+      if (timeLimit !== null) {
+        const filteredTemperatures = [];
+        const filteredHumidities = [];
+        const filteredCo2 = [];
+        const filteredTimestamps = [];
+
+        // Loop through each timestamp and check if it is within the time limit
+        for (let i = 0; i < timestamps.length; i++) {
+          const timestamp = new Date(timestamps[i]).getTime();
+          if (now - timestamp <= timeLimit) {
+            filteredTemperatures.push(temperatures[i]);
+            filteredHumidities.push(humidities[i]);
+            filteredCo2.push(co2[i]);
+            filteredTimestamps.push(timestamps[i]);
+          }
+        }
+
+        sensor.temperatures = filteredTemperatures;
+        sensor.humidities = filteredHumidities;
+        sensor.co2 = filteredCo2;
+        sensor.timestamps = filteredTimestamps;
+      } else {
+        // If no time limit is specified, return all data (this is for the endpoint that gets all data)
+        sensor.temperatures = temperatures;
+        sensor.humidities = humidities;
+        sensor.co2 = co2;
+        sensor.timestamps = timestamps;
+      }
     }
 
     return { sensors: filteredSensorData };

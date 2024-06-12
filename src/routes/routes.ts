@@ -444,6 +444,42 @@ routes.get("/api/sensor/data/:roomName", authenticateUser, async (req, res) => {
   }
 });
 
+routes.get(
+  "/api/sensor/data/hours/:hours",
+  authenticateUser,
+  async (req, res) => {
+    const user = req.user;
+    const institutionName = user.institutionName;
+    const hours = parseInt(req.params.hours);
+
+    try {
+      const data = await getSensorData(institutionName, null, hours, null);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Error getting sensor data:", error);
+      res.status(500).send("Error getting sensor data");
+    }
+  }
+);
+
+routes.get(
+  "/api/sensor/data/days/:days",
+  authenticateUser,
+  async (req, res) => {
+    const user = req.user;
+    const institutionName = user.institutionName;
+    const days = parseInt(req.params.days);
+
+    try {
+      const data = await getSensorData(institutionName, null, null, days);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Error getting sensor data:", error);
+      res.status(500).send("Error getting sensor data");
+    }
+  }
+);
+
 //#endregion
 
 //#endregion
