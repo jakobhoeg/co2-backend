@@ -16,7 +16,7 @@ const serviceAccount = JSON.parse(
   ).toString("utf-8")
 );
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK for sending push notifications
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   projectId: "airqual-9022b",
@@ -83,26 +83,3 @@ async function checkAndDeleteOldData() {
 
 // Schedule the cron job to run at 00:00 on the 1st day of every month
 cron.schedule("0 0 1 * *", checkAndDeleteOldData);
-
-const registrationToken =
-  "e7b3N6JGTRGQ_2k8Di9NuT:APA91bHIc1jWXCAc6oFV9-6WAsi45F8Z_a1glE9gniR0RBTphW30S1f8M9l7d2hlKWOZvAD-3C5VdfBsWMh-ZvepKUid9OjRiZ5q8X934R5IpsGydmYjSelaphAc4AtZF_ZrRFOcY_Ag";
-
-const message = {
-  notification: {
-    title: "GG",
-    body: "WP",
-  },
-  token: registrationToken,
-};
-
-// Send a message to the device corresponding to the provided
-// registration token.
-getMessaging()
-  .send(message)
-  .then((response) => {
-    // Response is a message ID string.
-    console.log("Successfully sent message:", response);
-  })
-  .catch((error) => {
-    console.log("Error sending message:", error);
-  });
